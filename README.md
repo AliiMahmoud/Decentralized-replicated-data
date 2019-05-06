@@ -1,7 +1,7 @@
 Decentralized-replicated-data
 ========
-peer to peer application.
-a poor implementataion using multicastsockets in java
+peer to peer application. <br />
+implemented using multicastsockets in java
 
 Installation
 ----
