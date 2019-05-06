@@ -1,39 +1,43 @@
 package control;
 
-import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class PeerHandler {
+import javafx.scene.layout.Background;
 
-	private HashMap<InetAddress, String> peers = new HashMap<>();
+public class Peer {
+	private Vector <String> peers = new Vector<>();
 	private String username = "Guest";
 	private MulticastSocket socket;
 	private final InetAddress groupAddress = InetAddress.getByName("225.0.0.1");
 	private final int port = 4446;
-	private final String mysenderAdderss = InetAddress.getLocalHost().getHostAddress();;
+	private final String myIpAdderss = InetAddress.getLocalHost().getHostAddress();;
 
-	public PeerHandler() throws Exception {
+	public Peer() throws Exception 
+	{
 		socket = new MulticastSocket(port);
 	}
 
-
-	public PeerHandler(String username) throws Exception {
+	public Peer(String username) throws Exception 
+	{
 
 		this();
 		this.username = username;
 	}
 
-	public void login(String name) throws Exception {
+	public void login(String name) throws Exception 
+	{
 		username = name;
 		connect();
 	}
 
-	public void login() throws Exception {
+	public void login() throws Exception 
+	{
 		connect();
 	}
 
-	public String receive() throws Exception {
+	public String receive() throws Exception 
+	{
 
 		String received = "";
 		if (socket.isClosed())
@@ -45,33 +49,56 @@ public class PeerHandler {
 		socket.receive(packet);
 
 		// circuitBreaker is trying to tell the peer -> slow down
-		if (packet.getData()[0] == 2) {
+		if (packet.getData()[0] == 2) 
+		{
 			return "-1";
 		}
-		// circuitBreaker is trying to tell the peer -> now you can send
-		if (packet.getData()[0] == 3) {
+		// circuitBreaker is trying to tell the peer -> now, you can send
+		else if (packet.getData()[0] == 3) 
+		{
 			return "1";
 		}
-
-		if (packet.getData()[0] == 1) {
+		
+		else if (packet.getData()[0] == 11) 
+		{
 			String newUsername = new String(packet.getData(), 1, packet.getLength());
 			newUsername = newUsername.trim();
-			if (!peers.containsKey(packet.getAddress()))
-				peers.put(packet.getAddress(), newUsername);
-			if (!newUsername.equals(username))
-				received += newUsername + " has joined the group ";
-		} else if (packet.getData()[0] == 0) {
-			if (peers.containsKey(packet.getAddress())) {
-				received += peers.get(packet.getAddress()) + " leave the group ";
-				peers.remove(packet.getAddress());
+			if (!peers.contains(newUsername) && !username.equals(newUsername))
+			{	
+				peers.add(newUsername);
 			}
-		} else {
-			String senderAdderss = packet.getAddress().toString();
-			if (!senderAdderss.substring(1, senderAdderss.length()).equals(mysenderAdderss)) {
-				received += (String) peers.get(packet.getAddress()) + " : " + new String(packet.getData());
-			} else {
-				received += "You : " + new String(packet.getData());
+		}
+		else if (packet.getData()[0] == 1) 
+		{
+			String newUsername = new String(packet.getData(), 1, packet.getLength());
+			newUsername = newUsername.trim();
+			if (!peers.contains(newUsername) && !newUsername.equals(username))
+			{	
+				peers.add(newUsername);
+				received += newUsername + " has joined the group ";			
 			}
+			if(!username.equals(newUsername))
+			{
+				sendSignal(new byte[] {11});
+			}
+		}
+		else if (packet.getData()[0] == 0) 
+		{
+			String newUsername = new String(packet.getData(), 1, packet.getLength());
+			newUsername = newUsername.trim();
+			if (peers.contains(newUsername)) 
+			{
+				received += newUsername + " has left the group ";
+				peers.remove(newUsername);
+				if (username.equals(newUsername)) 
+				{	
+					return null;
+				}
+			}
+		} 
+		else 
+		{
+			received += new String(packet.getData());
 		}
 		return received;
 	}
@@ -99,6 +126,7 @@ public class PeerHandler {
 	}
 
 	public void sendData(byte[] data) throws Exception {
+		data = concatenate((username + ": ").getBytes(), data);
 		DatagramPacket p = new DatagramPacket(data, data.length, groupAddress, port);
 		socket.send(p);
 	}
@@ -110,11 +138,11 @@ public class PeerHandler {
 		socket.send(p);
 	}
 
-	public HashMap<InetAddress, String> getPeers() {
+	public Vector<String> getPeers() {
 		return peers;
 	}
 
-	public void setPeers(HashMap<InetAddress, String> peers) {
+	public void setPeers(Vector<String> peers) {
 		this.peers = peers;
 	}
 
@@ -124,6 +152,10 @@ public class PeerHandler {
 
 	public void setUsername(String username) {
 		this.username = username;
+	}
+
+	public boolean isConnected() {
+		return !socket.isClosed();
 	}
 
 }
