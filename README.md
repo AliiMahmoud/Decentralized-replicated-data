@@ -5,5 +5,6 @@ implemented using multicastsockets in java
 
 Installation
 ----
-JavaFx is required
+ - Minimum JDK : 8
+ - GUI : JavaFx
 
